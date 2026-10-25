@@ -265,4 +265,21 @@ export class Quiz {
         this.isEvaluated.set(true);
         return points;
     }
+
+    evaluateCurrentQuestion(): number {
+        const index = get(this.index);
+        const question = this.questions[index];
+        const score = question.isCorrect() ? 1 : 0;
+        this.isEvaluated.set(true);
+        return score;
+    }
+
+    nextAfterCurrentQuestion(): boolean {
+        const index = get(this.index);
+        if (index < this.questions.length - 1) {
+            return this.next();
+        }
+        this.jump(this.questions.length);
+        return true;
+    }
 }

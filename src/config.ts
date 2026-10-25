@@ -15,7 +15,9 @@ const toRename = {
     primary_color: 'primaryColor',
     secondary_color: 'secondaryColor',
     text_color: 'textColor',
-    enable_retry: 'enableRetry'
+    enable_retry: 'enableRetry',
+    immediate_feedback: 'immediateFeedback',
+    auto_advance: 'autoAdvance'
 };
 
 export class Config {
@@ -31,6 +33,8 @@ export class Config {
     customFailMsg: string;
     locale: 'de' | 'en' | 'es' | 'fr' | null;
     enableRetry: boolean;
+    immediateFeedback: boolean;
+    autoAdvance: boolean;
 
     constructor(options: Config | object) {
         // handle <=v0.3.0 snake_case options for backwards compatibility
@@ -49,6 +53,8 @@ export class Config {
         this.customFailMsg = get(options['customFailMsg'], 'You have not passed');
         this.locale = get(options['locale'], null);
         this.enableRetry = get(options['enableRetry'],true);
+        this.immediateFeedback = get(options['immediateFeedback'], true);
+        this.autoAdvance = get(options['autoAdvance'], true);
     }
 }
 
