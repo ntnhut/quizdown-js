@@ -1,0 +1,115 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Inline explanation regression tests</title>
+<div id="quiz"></div>
+<pre id="report">Tests did not finish</pre>
+<script src="../public/build/quizdown.js"></script>
+<script>
+const source = [
+    '### First question', '', 'Visible prompt.', '', '> Hidden hint.', '',
+    '1. [x] Right',
+    '    > **Right feedback.**', '    >', '    > A second paragraph.',
+    '1. [ ] Wrong', '    > Wrong feedback.',
+    '1. [ ] No comment', '',
+    '```explanation', '### Shared explanation', '',
+    'First **paragraph**.', '', 'Second paragraph with `code`.', '',
+    '<img src="x" onerror="window.feedbackXss = true">',
+    '<a href="javascript:alert(1)">Unsafe link</a>',
+    '```', '',
+    '### Second question', '',
+    '- [x] Alpha', '    > Alpha feedback.',
+    '- [x] Beta', '    > Beta feedback.',
+    '- [ ] Gamma', '',
+    '```explanation', 'Second shared explanation.', '```',
+].join('\n');
+const host = document.querySelector('#quiz');
+const report = document.querySelector('#report');
+const pause = () => new Promise(resolve => setTimeout(resolve, 1200));
+let count = 0;
+let app;
+function check(value, message) {
+    if (!value) throw new Error(message);
+    count++;
+}
+const root = () => host.shadowRoot;
+const feedback = () => root().querySelector('.answer-feedback');
+async function choose(text) {
+    const label = [...root().querySelectorAll('label')]
+        .find(label => label.querySelector('span').textContent === text);
+    label.querySelector('input').click();
+    await pause();
+}
+async function mount(immediateFeedback, shuffleAnswers = false) {
+    if (app) app.$destroy();
+    const config = { immediateFeedback, shuffleAnswers, locale: 'en' };
+    const quiz = quizdown.parseQuizdown(source, config);
+    app = quizdown.createApp(source, host, config);
+    app.$set({ quiz });
+    await pause();
+    return quiz;
+}
+async function run() {
+    let quiz = await mount(true);
+    check(quiz.questions.length === 2, 'Headings inside explanation must not split questions');
+    check(root().textContent.includes('Visible prompt.'), 'Prompt stays visible');
+    check(!root().textContent.includes('Hidden hint.'), 'Hint stays hidden');
+    check(!root().textContent.includes('Shared explanation'), 'Shared explanation hidden initially');
+    check(!feedback().textContent.trim(), 'Comments hidden initially');
+    await choose('Wrong');
+    check(feedback().textContent.includes('Wrong feedback.'), 'Wrong choice reveals its comment');
+    check(root().querySelector('.wrong-answer'), 'Wrong answer remains red');
+    check(feedback().querySelector('h3'), 'Shared heading renders');
+    check(feedback().querySelectorAll('.question-explanation p').length >= 2, 'Shared paragraphs render');
+    check(feedback().querySelector('code'), 'Inline code renders');
+    check(!feedback().querySelector('[onerror], [href^="javascript:"]'), 'Feedback HTML is sanitized');
+    check(!window.feedbackXss, 'Unsafe HTML did not execute');
+    await choose('Right');
+    check(feedback().textContent.includes('Right feedback.'), 'Correct choice reveals its comment');
+    check(!feedback().textContent.includes('Wrong feedback.'), 'Old radio comment is removed');
+    check(feedback().querySelectorAll('.answer-comment p').length === 2, 'Answer comment paragraphs render');
+    check(root().querySelector('input:checked + .correct-answer'), 'Correct answer remains green');
+    check(quiz.questions[0].isCorrect(), 'Scoring still works');
+    await choose('No comment');
+    check(!feedback().querySelector('.answer-comment'), 'Empty comments do not render');
+    check(feedback().querySelectorAll('.question-explanation').length === 1, 'Shared explanation appears once');
+    quiz.next();
+    await pause();
+    check(!feedback().textContent.trim(), 'Next unanswered question has no feedback');
+    await choose('Alpha');
+    await choose('Beta');
+    check(feedback().querySelectorAll('.answer-comment').length === 2, 'Checkboxes show both selected comments');
+    check(quiz.questions[1].isCorrect(), 'Multiple choice scoring still works');
+    await choose('Alpha');
+    check(!feedback().textContent.includes('Alpha feedback.'), 'Unchecked comment removed');
+    await choose('Beta');
+    check(!feedback().textContent.trim(), 'No selection hides all feedback');
+    quiz.previous();
+    await pause();
+    check(feedback().textContent.includes('Shared explanation'), 'Returning to answered question restores feedback');
+    check(!feedback().textContent.includes('Second shared'), 'Other question feedback does not leak');
+    root().querySelector('button[title="One more time!"]').click();
+    await pause();
+    check(!feedback().textContent.trim(), 'Reset hides explanations');
+    check(!root().querySelector('input:checked'), 'Reset clears selection');
+    quiz = await mount(true, true);
+    await choose('Wrong');
+    check(feedback().textContent.includes('Wrong feedback.'), 'Shuffling keeps comment with answer');
+    quiz = await mount(false);
+    await choose('Wrong');
+    check(!feedback().textContent.trim(), 'Disabled immediate feedback keeps explanations hidden');
+    check(!root().querySelector('.wrong-answer'), 'Disabled immediate feedback keeps colors hidden');
+    quiz.jump(quiz.questions.length);
+    await pause();
+    check(root().textContent.includes('Wrong feedback.'), 'Legacy result comments still render');
+    check(root().textContent.includes('Shared explanation'), 'Shared explanation available in results-only mode');
+    // Existing quizzes without shared explanations remain supported.
+    const legacy = quizdown.parseQuizdown('### Legacy\n\n1. [x] Yes\n1. [ ] No', {});
+    check(legacy.questions[0].answerExplanation === '', 'Legacy syntax remains valid');
+    report.textContent = `PASS: ${count} browser assertions`;
+    report.dataset.result = 'passed';
+}
+run().catch(error => {
+    report.textContent = `FAIL after ${count} assertions: ${error.stack}`;
+    report.dataset.result = 'failed';
+});
+</script>

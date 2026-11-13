@@ -20,9 +20,13 @@
         if (!fieldset) {
             throw new Error('Quiz answer input is not inside a fieldset.');
         }
-        question.selected = Array.from(
-            fieldset.querySelectorAll<HTMLInputElement>('input:checked')
-        ).map((input) => Number(input.value));
+        // Svelte's radio group binding updates the other inputs after this
+        // handler, so reading all checked radios here can retain the old choice.
+        question.selected = question.questionType === 'SingleChoice'
+            ? [Number(input.value)]
+            : Array.from(
+                fieldset.querySelectorAll<HTMLInputElement>('input:checked')
+            ).map((input) => Number(input.value));
         question.isCorrect();
         feedback = question.answers.map((answer, i) => {
             if (feedback[i] !== null && feedback[i] !== undefined) {
@@ -72,7 +76,38 @@
     {/if}
 </fieldset>
 
+<!-- Keep the live region mounted so newly revealed feedback is announced. -->
+<div class="answer-feedback" aria-live="polite" aria-atomic="true">
+    {#if question.options.immediateFeedback && question.selected.length > 0}
+        {#each question.selected as selected}
+            {#if question.answers[selected].comment}
+                <div class="answer-comment">
+                    {@html question.answers[selected].comment}
+                </div>
+            {/if}
+        {/each}
+        {#if question.answerExplanation}
+            <div class="question-explanation">
+                {@html question.answerExplanation}
+            </div>
+        {/if}
+    {/if}
+</div>
+
 <style>
+    .answer-comment,
+    .question-explanation {
+        margin: 1rem 0;
+        padding: 0.25rem 1rem;
+        border-left: 3px solid var(--quizdown-color-primary);
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+    }
+
+    .answer-feedback :global(pre) {
+        overflow-x: auto;
+    }
+
     :global(.correct-answer) {
         background-color: #d4edda !important;
         border-color: #28a745 !important;

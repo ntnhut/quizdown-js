@@ -72,14 +72,27 @@ function parseQuestion(tokens: marked.Token[], config: Config): BaseQuestion {
     let questionType = determineQuestionType(tokens);
     let questionConfig = new Config(config);
     const args = [heading, explanation, hint, answers, questionConfig] as const;
+    let question: BaseQuestion;
     switch (questionType) {
         case 'SingleChoice':
-            return new SingleChoice(...args);
+            question = new SingleChoice(...args);
+            break;
         case 'MultipleChoice':
-            return new MultipleChoice(...args);
+            question = new MultipleChoice(...args);
+            break;
         case 'Sequence':
-            return new Sequence(...args);
+            question = new Sequence(...args);
+            break;
     }
+    question.answerExplanation = tokens
+        .filter(isAnswerExplanation)
+        .map((token: marked.Tokens.Code) => parseFeedback(marked.lexer(token.text)))
+        .join('\n');
+    return question;
+}
+
+function isAnswerExplanation(token: marked.Token): boolean {
+    return token.type === 'code' && token.lang === 'explanation';
 }
 
 function findFirstHeadingIdx(tokens: marked.Token[]): number {
@@ -93,7 +106,8 @@ function parseHint(tokens: marked.Token[]): string {
 
 function parseExplanation(tokens: marked.Token[]): string {
     let explanations = tokens.filter(
-        (token) => token['type'] == 'paragraph' || token['type'] == 'code'
+        (token) => (token.type === 'paragraph' || token.type === 'code') &&
+            !isAnswerExplanation(token)
     );
     return parseTokens(explanations);
 }
@@ -120,7 +134,19 @@ function parseAnswers(tokens: marked.Token[]): Array<Answer> {
 function parseAnswer(item: marked.Tokens.ListItem) {
     let comments = item['tokens'].filter((token) => token.type == 'blockquote');
     let texts = item['tokens'].filter((token) => token.type != 'blockquote');
-    return { text: parseTokens(texts), comment: parseTokens(comments) };
+    return {
+        text: parseTokens(texts),
+        comment: comments.map((token: marked.Tokens.Blockquote) =>
+            parseFeedback(marked.lexer(token.text))
+        ).join('\n'),
+    };
+}
+
+// Feedback needs real paragraphs and headings; the prompt renderer strips them.
+function parseFeedback(tokens: marked.Token[]): string {
+    return DOMPurify.sanitize(marked.parser(tokens as marked.TokensList, {
+        renderer: new marked.Renderer(),
+    }));
 }
 
 function determineQuestionType(tokens: marked.Token[]): QuestionType {

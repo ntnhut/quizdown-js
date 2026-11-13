@@ -29,7 +29,55 @@ Here is an example that shows many features (edit in the [🚀quizdown editor](h
 ## Hints and comments
 
 The user can activate hints by pressing a button. If no hint is provided the button is grayed out. 
-Comments to answers are shown at the result page (only if the user selected an answer that contained a comment).
+With `immediateFeedback: true` (the default in this fork), comments on selected
+single-choice and multiple-choice answers appear immediately below the choices.
+Write a comment as an indented blockquote under an answer. It can contain
+paragraphs, headings, lists, links, and code. Changing the selected answer updates
+the feedback; deselecting a checkbox removes its comment. Feedback remains visible
+when revisiting an answered question, and Reset hides it again.
+
+Comments also appear on the results page for selected answers. Set
+`immediateFeedback: false` to show them only there. An unindented blockquote
+remains a hint, and ordinary paragraphs/code remain visible question content.
+
+### Shared answer explanation
+
+To write one explanation for the whole question, use a fenced block with the
+language `explanation`. Its contents are Markdown and are hidden until an answer
+is selected. The explanation appears once below the choices, regardless of which
+answer was selected or whether it was correct. It can be combined with individual
+answer comments. Each question owns its own explanation, so this works with
+multiple questions in one quiz.
+
+````markdown
+### What is 2 + 2?
+
+1. [x] 4
+    > Correct: addition gives **4**.
+1. [ ] 5
+    > That is one too many.
+
+```explanation
+### Answer and explanation
+
+Adding two pairs gives **four** objects.
+
+This paragraph is separated from the first for readability.
+```
+
+### What is 3 + 3?
+
+1. [x] 6
+1. [ ] 7
+````
+
+Shared explanations appear inline for choice questions when `immediateFeedback`
+is enabled. When it is disabled, or for sequence questions, they appear on the
+results page instead. Sequence questions do not have immediate answer feedback.
+
+To run the regression checks, build with `npm run build`, then run `npm test`.
+The tests use a local headless Chrome installation; set `CHROME_BIN` to its
+executable path if it is not available as `google-chrome`.
 
 ## Multiple choice question ([🚀 editor](https://bonartm.github.io/quizdown-live-editor/?code=%23%23%23%20What%27s%20the%20capital%20of%20Germany%3F%0A%0A%3E%20It%27s%20the%20_largest_%20city%20in%20Germany...%0A%0A-%20%5Bx%5D%20Berlin%0A%20%20%20%20%3E%20this%20is%20the%20correct%20answer.%0A-%20%5B%20%5D%20Frankfurt%0A-%20%5B%20%5D%20Paris%0A%20%20%20%20%3E%20Paris%20is%20the%20capital%20of%20France.%0A-%20%5B%20%5D%20Cologne))
 

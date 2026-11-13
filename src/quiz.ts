@@ -32,6 +32,8 @@ export abstract class BaseQuestion {
     readonly text: string;
     answers: Array<Answer>;
     readonly explanation: string;
+    // Hidden answer feedback, distinct from the always-visible question prompt.
+    answerExplanation: string = '';
     selected: Array<number>;
     solved: boolean;
     readonly hint: string;

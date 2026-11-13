@@ -16,7 +16,8 @@ let config = {
     secondaryColor: '#f2f2f2',  // secondary CSS color
     textColor: 'black',         // text color of some elements
     locale: null,               // language of the user interface (auto-detect per default)
-    enableRetry: true           // allow the user to resubmit answers
+    enableRetry: true,          // allow the user to resubmit answers
+    immediateFeedback: true    // color choices and reveal selected answer comments/shared explanations
 };
 
 quizdown.init(config);

@@ -55,6 +55,12 @@
                         {emojis[+question.solved]}
                         {@html question.text}
                     </span>
+                    {#if question.answerExplanation &&
+                        (!question.options.immediateFeedback || question.questionType === 'Sequence')}
+                        <div class="question-explanation">
+                            {@html question.answerExplanation}
+                        </div>
+                    {/if}
                     <ol>
                         <!-- answer comments when selected and available -->
                         {#each question.selected as selected}
